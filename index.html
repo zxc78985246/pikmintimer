@@ -809,68 +809,88 @@ function draw() {
   }
 }
 
-// 初始化 canvas stream → video → PiP
-function initStream() {
+// ═══════════════════════════════
+// iOS Safari PiP 正確實作
+//
+// 核心限制：
+//   iOS Safari 要求 play() 必須在 user gesture 的「同步」call stack 中
+//   但 play() 返回 Promise，.then(pipRequest) 已是下一個 microtask → 不算 gesture
+//
+// 解法：
+//   利用 iOS 的特性：video.webkitSetPresentationMode('picture-in-picture')
+//   在 video 尚未 play 時呼叫，iOS 會「自動先 play 再進入 PiP」
+//   整個流程在同步 gesture call stack 內完成
+//   → 不需要先 play()，直接呼叫 webkitSetPresentationMode 即可
+//
+// 注意：video.srcObject 必須在呼叫前設好（但不需要先 play）
+// ═══════════════════════════════
+
+let streamReady = false;
+
+function setupStream() {
+  if (streamReady) return true;
   try {
     const stream = canvas.captureStream(4);
     video.srcObject = stream;
-    video.play().then(() => {
-      btn.textContent = '▶ 開啟子母畫面';
-      statusEl.textContent = '準備就緒，點擊開啟子母畫面';
-    }).catch(e => {
-      statusEl.textContent = '⚠️ 請點擊頁面後再試';
-    });
+    streamReady = true;
+    return true;
   } catch(e) {
-    statusEl.textContent = '⚠️ 此環境不支援子母畫面';
+    statusEl.textContent = '⚠️ 此環境不支援子母畫面（' + e.message + '）';
     btn.disabled = true;
+    return false;
   }
 }
 
 function togglePip() {
-  if (pipActive) {
-    stopPip();
-  } else {
-    startPip();
-  }
-}
+  // 確保 stream 已設定（同步，不需要 play）
+  if (!setupStream()) return;
 
-function startPip() {
+  // 確保 canvas draw 已啟動
   if (!drawTimer) {
     draw();
     drawTimer = setInterval(draw, 250);
   }
-  const tryPip = () => {
-    if (typeof video.webkitSetPresentationMode === 'function') {
+
+  if (pipActive) {
+    stopPip();
+    return;
+  }
+
+  // iOS Safari / iOS PWA：直接同步呼叫，iOS 會自動處理 play
+  if (typeof video.webkitSetPresentationMode === 'function') {
+    try {
       video.webkitSetPresentationMode('picture-in-picture');
-      pipActive = true;
-      btn.textContent = '■ 關閉子母畫面';
-      btn.className = 'btn stop';
-    } else if (typeof video.requestPictureInPicture === 'function') {
-      video.requestPictureInPicture().then(() => {
+      // 成功：狀態更新由 event listener 處理
+    } catch(e) {
+      // 若失敗才顯示錯誤
+      statusEl.textContent = '⚠️ 無法開啟：' + e.message;
+    }
+    return;
+  }
+
+  // 非 iOS（Chrome/Firefox）：標準 API，需要先 play
+  if (typeof video.requestPictureInPicture === 'function') {
+    (video.paused ? video.play() : Promise.resolve())
+      .then(() => video.requestPictureInPicture())
+      .then(() => {
         pipActive = true;
         btn.textContent = '■ 關閉子母畫面';
         btn.className = 'btn stop';
-      }).catch(e => {
-        statusEl.textContent = '⚠️ 無法開啟：' + (e.message||e);
+      })
+      .catch(e => {
+        statusEl.textContent = '⚠️ 無法開啟：' + (e.message || e);
       });
-    } else {
-      statusEl.textContent = '⚠️ 此裝置不支援子母畫面功能';
-    }
-  };
-  if (video.paused) {
-    video.play().then(tryPip).catch(e => {
-      statusEl.textContent = '⚠️ 影像未就緒：' + (e.message||e);
-    });
-  } else {
-    tryPip();
+    return;
   }
+
+  statusEl.textContent = '⚠️ 此裝置不支援子母畫面功能';
 }
 
 function stopPip() {
   try {
     if (document.pictureInPictureElement) {
-      document.exitPictureInPicture();
-    } else if (video.webkitPresentationMode==='picture-in-picture') {
+      document.exitPictureInPicture().catch(() => {});
+    } else if (video.webkitPresentationMode === 'picture-in-picture') {
       video.webkitSetPresentationMode('inline');
     }
   } catch(e) {}
@@ -879,23 +899,29 @@ function stopPip() {
   btn.className = 'btn';
 }
 
+// iOS PiP 狀態變化 listener
+video.addEventListener('webkitpresentationmodechanged', () => {
+  const inPip = video.webkitPresentationMode === 'picture-in-picture';
+  pipActive = inPip;
+  btn.textContent = inPip ? '■ 關閉子母畫面' : '▶ 開啟子母畫面';
+  btn.className = inPip ? 'btn stop' : 'btn';
+  if (inPip) {
+    statusEl.textContent = '子母畫面已開啟 ✅';
+  }
+});
+// 標準 API listener（Chrome/Firefox）
 video.addEventListener('leavepictureinpicture', () => {
   pipActive = false;
   btn.textContent = '▶ 開啟子母畫面';
   btn.className = 'btn';
 });
-video.addEventListener('webkitpresentationmodechanged', () => {
-  if (video.webkitPresentationMode !== 'picture-in-picture') {
-    pipActive = false;
-    btn.textContent = '▶ 開啟子母畫面';
-    btn.className = 'btn';
-  }
-});
 
-// 啟動
+// 啟動 canvas 繪製（不 play video，等按鈕觸發）
 draw();
 drawTimer = setInterval(draw, 250);
-initStream();
+// 預先設定 srcObject（同步，不需要 gesture）
+setupStream();
+statusEl.textContent = '點擊下方按鈕開啟子母畫面';
 <\/script>
 </body>
 </html>`;
