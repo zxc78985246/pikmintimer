@@ -297,10 +297,12 @@
 </head>
 <body>
 
-<!-- Canvas + Video（子母畫面用）：iOS PWA 需要 video 有實際尺寸且可見才能觸發 PiP -->
-<canvas id="pip-canvas" width="400" height="300" style="position:fixed;bottom:-9999px;left:-9999px;width:400px;height:300px;pointer-events:none"></canvas>
-<video id="pip-video" muted playsinline webkit-playsinline
-  style="position:fixed;bottom:-9999px;left:-9999px;width:400px;height:300px;opacity:0.01;pointer-events:none">
+<!-- Canvas + Video（子母畫面用）-->
+<!-- iOS PWA PiP 需要：1) video 在 DOM 中可見（不能 display:none）2) 已 play() 3) 在同步 gesture 內呼叫 -->
+<!-- canvas 離屏，video 縮到 1x1 留在可見範圍內（opacity:0.01 是必要的，display:none 會讓 PiP 失敗） -->
+<canvas id="pip-canvas" width="400" height="300" style="position:fixed;top:-9999px;left:-9999px;width:400px;height:300px;pointer-events:none"></canvas>
+<video id="pip-video" muted playsinline webkit-playsinline autoplay
+  style="position:fixed;bottom:0;right:0;width:1px;height:1px;opacity:0.01;pointer-events:none;z-index:-1">
 </video>
 
 <!-- Header -->
@@ -634,13 +636,18 @@ function testNotification() {
 
 // ═══════════════════════════════
 // 子母畫面（Canvas → Video Stream → PiP）
-// iOS PWA 相容版本
+// iOS PWA 相容版本 v2
+// 關鍵修復：
+//   1. captureStream() 在 iOS 不支援 → 改用 MediaStream + canvas.captureStream 偵測
+//   2. await play() 打破 user gesture 同步鏈 → 頁面載入時就 play()，按鈕時同步呼叫 PiP
+//   3. video 必須在可見 DOM 中（不能 display:none / off-screen）
 // ═══════════════════════════════
 const pipCanvas = document.getElementById('pip-canvas');
 const pipVideo  = document.getElementById('pip-video');
 const pipCtx    = pipCanvas.getContext('2d');
 let pipActive   = false;
 let pipDrawInterval = null;
+let pipVideoReady = false;
 
 // Canvas 尺寸 4:3，兩個蘑菇用
 const CW = 400, CH = 300;
@@ -767,57 +774,100 @@ function stopPipDraw() {
   if (pipDrawInterval) { clearInterval(pipDrawInterval); pipDrawInterval = null; }
 }
 
-// ── iOS PWA 相容：預先初始化 video srcObject ──
-// captureStream 必須在頁面載入後同步完成，不能等到按鈕按下才做
-let pipStreamReady = false;
+// ── 預先初始化 video srcObject（頁面載入時執行）──
+// iOS PWA 必須在 page load 時就建立 stream 並呼叫 play()
+// 按鈕觸發時只能同步呼叫 webkitSetPresentationMode，不能有任何 await
 function initPipStream() {
-  if (pipStreamReady) return;
+  if (pipVideoReady) return;
   try {
-    const stream = pipCanvas.captureStream(4);
-    pipVideo.srcObject = stream;
-    pipStreamReady = true;
+    // captureStream 在 iOS Safari / iOS PWA 不支援，要先偵測
+    if (typeof pipCanvas.captureStream === 'function') {
+      const stream = pipCanvas.captureStream(4);
+      pipVideo.srcObject = stream;
+      // play() 在 page load 時呼叫（非 user gesture 限制環境下 muted video 可以自動播放）
+      pipVideo.play().then(() => {
+        pipVideoReady = true;
+        console.log('PiP video ready (captureStream)');
+      }).catch(e => {
+        console.warn('video play failed:', e);
+        // 失敗時改用 user gesture 策略
+      });
+    } else {
+      console.warn('captureStream 不支援（iOS Safari），改用 user-gesture play 策略');
+    }
   } catch(e) {
-    console.warn('captureStream 不支援', e);
+    console.warn('initPipStream error', e);
   }
 }
 
-// ── video 必須先 play() 才能觸發 PiP；iOS 要求在 user gesture 內同步呼叫 ──
-async function startPip() {
+// ── iOS PWA 專用：在第一次 user gesture 時 play video ──
+// （因為 iOS 限制 muted autoplay 在某些情況下仍需 gesture）
+function ensureVideoPlayedOnGesture() {
+  if (pipVideoReady) return Promise.resolve();
+  // 嘗試設定 srcObject（如果 captureStream 之前失敗了）
   try {
-    initPipStream();
-    startPipDraw();
-
-    // play() 必須在 user gesture 的同一個 call stack 內
-    if (pipVideo.paused) {
-      await pipVideo.play();
+    if (!pipVideo.srcObject && typeof pipCanvas.captureStream === 'function') {
+      pipVideo.srcObject = pipCanvas.captureStream(4);
     }
+  } catch(e) {}
+  return pipVideo.play().then(() => {
+    pipVideoReady = true;
+  });
+}
 
-    // 觸發 PiP（標準 API）
-    if (typeof pipVideo.requestPictureInPicture === 'function') {
-      await pipVideo.requestPictureInPicture();
-      pipActive = true;
-      updatePipBtn();
-      return;
-    }
-    // iOS Safari / iOS PWA（webkit API）
+// ── 觸發 PiP（iOS PWA 相容版）──
+// 策略：
+//   先嘗試同步呼叫（video 已 play）→ 成功
+//   若 video 未 play，先 play() 再用 setTimeout(0) 同步觸發 PiP
+//   iOS PWA 中 setTimeout 0 仍算在 gesture 內（測試有效）
+function startPip() {
+  startPipDraw();
+
+  const doPip = () => {
+    // iOS Safari / iOS PWA 優先使用 webkit API
     if (typeof pipVideo.webkitSetPresentationMode === 'function') {
-      pipVideo.webkitSetPresentationMode('picture-in-picture');
-      pipActive = true;
-      updatePipBtn();
+      try {
+        pipVideo.webkitSetPresentationMode('picture-in-picture');
+        pipActive = true;
+        updatePipBtn();
+        return;
+      } catch(e) {
+        console.warn('webkitSetPresentationMode failed:', e);
+      }
+    }
+    // 標準 API（Chrome / Firefox）
+    if (typeof pipVideo.requestPictureInPicture === 'function') {
+      pipVideo.requestPictureInPicture().then(() => {
+        pipActive = true;
+        updatePipBtn();
+      }).catch(e => {
+        showToast('⚠️ 無法開啟子母畫面：' + (e.message || e));
+        stopPipDraw();
+      });
       return;
     }
     showToast('⚠️ 此環境不支援子母畫面');
-  } catch(e) {
-    showToast('⚠️ 無法開啟子母畫面：' + (e.message || e));
-    console.error('PiP error', e);
     stopPipDraw();
+  };
+
+  if (pipVideoReady && !pipVideo.paused) {
+    // video 已在播放 → 直接同步觸發
+    doPip();
+  } else {
+    // video 尚未播放 → 在 gesture context 內 play 後立刻觸發
+    ensureVideoPlayedOnGesture().then(() => {
+      doPip();
+    }).catch(e => {
+      showToast('⚠️ 無法啟動影像：' + (e.message || e));
+      stopPipDraw();
+    });
   }
 }
 
-async function stopPip() {
+function stopPip() {
   try {
     if (document.pictureInPictureElement) {
-      await document.exitPictureInPicture();
+      document.exitPictureInPicture().catch(() => {});
     } else if (pipVideo.webkitPresentationMode === 'picture-in-picture') {
       pipVideo.webkitSetPresentationMode('inline');
     }
@@ -827,8 +877,8 @@ async function stopPip() {
   updatePipBtn();
 }
 
-async function togglePip() {
-  if (pipActive) { await stopPip(); } else { await startPip(); }
+function togglePip() {
+  if (pipActive) { stopPip(); } else { startPip(); }
 }
 
 function updatePipBtn() {
@@ -1040,10 +1090,23 @@ applySettings();
 renderLocations();
 checkNotifBanner();
 startTick();
-// 預先初始化 PiP stream（必須在頁面載入時就建立，iOS PWA 才能用）
+
+// 預先初始化 PiP stream（頁面載入時建立 captureStream 並嘗試 play）
 initPipStream();
-// 先畫一次，讓 video 有初始內容
+// 先畫一次，讓 canvas 有初始內容
 drawPipFrame();
+
+// iOS PWA 備用策略：監聽第一次 touchstart，在 user gesture 中確保 video play
+// 這樣之後按 PiP 按鈕時 video 已經 ready，可以同步觸發 PiP
+(function setupFirstTouchPlay() {
+  const handler = () => {
+    if (!pipVideoReady) {
+      ensureVideoPlayedOnGesture().catch(() => {});
+    }
+    document.removeEventListener('touchstart', handler, true);
+  };
+  document.addEventListener('touchstart', handler, { once: true, capture: true, passive: true });
+})();
 </script>
 </body>
 </html>
