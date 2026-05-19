@@ -297,17 +297,10 @@
 </head>
 <body>
 
-<!-- Canvas + Video（子母畫面用）-->
-<!-- iOS PWA PiP 修復：
-     1. captureStream 在 iOS 不支援 → 改用真實 MP4 loop 作為 video 來源
-     2. Canvas 繪製的畫面透過 canvas.toBlob() 無法注入 video，故 video 顯示靜音背景
-     3. PiP 視窗的「畫中畫」內容由 iOS 顯示 video 來源；計時資訊仍在主畫面顯示
-     4. video 必須在 DOM 可見範圍（不能 display:none）且 paused=false 才能觸發 PiP
--->
-<canvas id="pip-canvas" width="400" height="300" style="position:fixed;top:-9999px;left:-9999px;pointer-events:none;width:1px;height:1px;opacity:0"></canvas>
-<video id="pip-video" muted playsinline webkit-playsinline loop
-  style="position:fixed;bottom:0;right:0;width:1px;height:1px;opacity:0.01;pointer-events:none;z-index:-1"
-  src="data:video/mp4;base64,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AAQAAAAgc3RjbwAAAAAAAAAEAAAH0gAACm0AAAsnAAAL3QAAABpzZ3BkAQAAAHJvbGwAAAACAAAAAf//AAAAHHNiZ3AAAAAAcm9sbAAAAAEAAACDAAAAAQAAAGJ1ZHRhAAAAWm1ldGEAAAAAAAAAIWhkbHIAAAAAAAAAAG1kaXJhcHBsAAAAAAAAAAAAAAAALWlsc3QAAAAlqXRvbwAAAB1kYXRhAAAAAQAAAABMYXZmNjAuMTYuMTAwAAAACGZyZWUAAAS/bWRhdN4CAExhdmM2MC4zMS4xMDIAAjBADgAAAnAGBf//bNxF6b3m2Ui3lizYINkj7u94MjY0IC0gY29yZSAxNjQgcjMxMDggMzFlMTlmOSAtIEguMjY0L01QRUctNCBBVkMgY29kZWMgLSBDb3B5bGVmdCAyMDAzLTIwMjMgLSBodHRwOi8vd3d3LnZpZGVvbGFuLm9yZy94MjY0Lmh0bWwgLSBvcHRpb25zOiBjYWJhYz0wIHJlZj0zIGRlYmxvY2s9MTowOjAgYW5hbHlzZT0weDE6MHgxMTEgbWU9aGV4IHN1Ym1lPTcgcHN5PTEgcHN5X3JkPTEuMDA6MC4wMCBtaXhlZF9yZWY9MSBtZV9yYW5nZT0xNiBjaHJvbWFfbWU9MSB0cmVsbGlzPTEgOHg4ZGN0PTAgY3FtPTAgZGVhZHpvbmU9MjEsMTEgZmFzdF9wc2tpcD0xIGNocm9tYV9xcF9vZmZzZXQ9LTIgdGhyZWFkcz0xIGxvb2thaGVhZF90aHJlYWRzPTEgc2xpY2VkX3RocmVhZHM9MCBucj0wIGRlY2ltYXRlPTEgaW50ZXJsYWNlZD0wIGJsdXJheV9jb21wYXQ9MCBjb25zdHJhaW5lZF9pbnRyYT0wIGJmcmFtZXM9MCB3ZWlnaHRwPTAga2V5aW50PTI1MCBrZXlpbnRfbWluPTEgc2NlbmVjdXQ9NDAgaW50cmFfcmVmcmVzaD0wIHJjX2xvb2thaGVhZD00MCByYz1jcmYgbWJ0cmVlPTEgY3JmPTIzLjAgcWNvbXA9MC42MCBxcG1pbj0wIHFwbWF4PTY5IHFwc3RlcD00IGlwX3JhdGlvPTEuNDAgYXE9MToxLjAwAIAAAAAOZYiEBf///w9FAAFXn4ABGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwAAAAZBmjgLeoABGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHAAAABkGaVAK+oAEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAc=">
+<!-- Canvas + Video（子母畫面用）：iOS PWA 需要 video 有實際尺寸且可見才能觸發 PiP -->
+<canvas id="pip-canvas" width="400" height="300" style="position:fixed;bottom:-9999px;left:-9999px;width:400px;height:300px;pointer-events:none"></canvas>
+<video id="pip-video" muted playsinline webkit-playsinline
+  style="position:fixed;bottom:-9999px;left:-9999px;width:400px;height:300px;opacity:0.01;pointer-events:none">
 </video>
 
 <!-- Header -->
@@ -318,7 +311,7 @@
     <div class="header-sub">Pikmin Bloom</div>
   </div>
   <div class="header-right">
-    <button class="header-btn pip-btn" id="pip-btn" onclick="togglePip()">▶ 子母畫面</button>
+    <button class="header-btn pip-btn" id="pip-btn" onclick="openPipWindow()">▶ 子母畫面</button>
     <button class="header-btn" onclick="openModal('modal-help')">說明</button>
     <button class="header-btn" onclick="openModal('modal-install')">加入主畫面</button>
   </div>
@@ -351,9 +344,10 @@
     <div class="pip-card">
       <div class="pip-card-title">▶ 子母畫面使用方式</div>
       <div class="pip-card-body">
-        點擊右上角「▶ 子母畫面」按鈕，即可在懸浮小視窗中顯示最近兩個蘑菇的倒數。<br>
-        切換到遊戲時，計時器仍會持續顯示在畫面角落。<br>
-        <span style="color:var(--warning)">⚠️ iOS 需先：① 至設定 → 一般 → 畫中畫 → 開啟 ② 將本頁加入主畫面後從主畫面開啟，再按子母畫面按鈕</span>
+        點擊右上角「▶ 子母畫面」按鈕，會開啟一個新視窗。<br>
+        在新視窗中點擊「▶ 開啟子母畫面」，計時器即會懸浮顯示在畫面角落。<br>
+        切換到遊戲時，倒數計時仍會持續顯示。<br>
+        <span style="color:var(--warning)">⚠️ iOS 需先至設定 → 一般 → 畫中畫 → 開啟。若彈出視窗被阻擋，請在 Safari 設定中允許彈出式視窗。</span>
       </div>
     </div>
 
@@ -640,6 +634,293 @@ function testNotification() {
 }
 
 // ═══════════════════════════════
+// 子母畫面 - Safari 新視窗方案
+// 策略：
+//   主頁面（可能是 PWA）把 timers 寫入 localStorage['pip_timers']
+//   window.open 開啟子視窗（在 Safari 環境中執行）
+//   子視窗讀取 localStorage，用 canvas.captureStream → video → PiP
+//   Safari 支援 captureStream，PiP 內容可顯示即時倒數
+// ═══════════════════════════════
+
+// ── 同步計時器資料到 localStorage（供子視窗讀取）──
+function syncTimers() {
+  try {
+    localStorage.setItem('pip_timers', JSON.stringify(timers));
+  } catch(e) {}
+}
+
+// ── 開啟子母畫面視窗 ──
+let pipWin = null;
+function openPipWindow() {
+  // 先同步最新資料
+  syncTimers();
+
+  // 子視窗 HTML（自包含，不依賴任何外部資源）
+  const pipHtml = `<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🍄 子母畫面</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: #0D1B2A; color: #fff;
+    font-family: -apple-system, 'PingFang TC', sans-serif;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    height: 100vh; gap: 16px;
+    padding: 20px;
+  }
+  canvas { border-radius: 12px; max-width: 100%; box-shadow: 0 4px 24px rgba(0,0,0,0.5); }
+  .btn {
+    background: #2ECC71; color: #000; border: none;
+    font-size: 18px; font-weight: 700; padding: 16px 40px;
+    border-radius: 16px; cursor: pointer;
+    font-family: inherit; width: 100%; max-width: 340px;
+  }
+  .btn:active { opacity: 0.8; }
+  .btn.stop { background: #E74C3C; color: #fff; }
+  .status { font-size: 13px; color: #888; text-align: center; }
+  video { display: none; }
+</style>
+</head>
+<body>
+<canvas id="c" width="400" height="300"></canvas>
+<button id="btn" onclick="togglePip()">▶ 開啟子母畫面</button>
+<div class="status" id="status">讀取計時器資料中...</div>
+<video id="v" muted playsinline webkit-playsinline></video>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const video = document.getElementById('v');
+const btn = document.getElementById('btn');
+const statusEl = document.getElementById('status');
+const CW = 400, CH = 300;
+let pipActive = false;
+let drawTimer = null;
+let timers = [];
+
+function loadTimers() {
+  try {
+    const raw = localStorage.getItem('pip_timers');
+    if (raw) timers = JSON.parse(raw);
+  } catch(e) {}
+}
+
+function fmt(sec) {
+  if (sec < 0) sec = 0;
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = Math.floor(sec % 60);
+  if (h > 0) return h + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+  return m + ':' + String(s).padStart(2,'0');
+}
+
+function draw() {
+  loadTimers();
+  const now = Date.now();
+  const sorted = [...timers].sort((a,b) => a.endTime - b.endTime).slice(0,2);
+
+  ctx.fillStyle = '#0D1B2A';
+  ctx.fillRect(0, 0, CW, CH);
+
+  // 標題列
+  ctx.fillStyle = '#16213E';
+  ctx.fillRect(0, 0, CW, 44);
+  ctx.fillStyle = '#2ECC71';
+  ctx.font = 'bold 17px -apple-system, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('\\u{1F344} \\u853a\\u83c7\\u8a08\\u6642\\u5668', 14, 29);
+  const ts = new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  ctx.fillStyle = '#666688';
+  ctx.font = '13px -apple-system, sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText(ts, CW-14, 29);
+
+  if (sorted.length === 0) {
+    ctx.fillStyle = '#555577';
+    ctx.font = '16px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('\\u76ee\\u524d\\u6c92\\u6709\\u9032\\u884c\\u4e2d\\u7684\\u853a\\u83c7', CW/2, CH/2+10);
+    ctx.font = '32px serif';
+    ctx.fillText('\\u{1F344}', CW/2, CH/2+52);
+    statusEl.textContent = '目前沒有進行中的蘑菇';
+    return;
+  }
+
+  statusEl.textContent = '正在顯示 ' + timers.length + ' 個蘑菇 · 每秒更新';
+  const HEADER_H = 44, CONTENT_H = CH - HEADER_H;
+
+  sorted.forEach((t, i) => {
+    const rem = Math.floor((t.endTime - now) / 1000);
+    const isDone = rem <= 0;
+    const isRed  = !isDone && rem <= 10;
+    const isOra  = !isDone && rem > 10 && rem <= 30;
+    const heights = [Math.floor(CONTENT_H*0.60), Math.floor(CONTENT_H*0.40)];
+    const h = sorted.length===1 ? CONTENT_H : heights[i];
+    const y = HEADER_H + (i===0 ? 0 : heights[0]);
+
+    ctx.fillStyle = i===0 ? '#16213E' : '#111828';
+    ctx.fillRect(0, y, CW, h);
+
+    if (isRed) {
+      const alpha = 0.35 + 0.65 * Math.abs(Math.sin(now/300));
+      ctx.strokeStyle = 'rgba(231,76,60,'+alpha+')';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(2, y+2, CW-4, h-4);
+    } else if (isOra) {
+      ctx.strokeStyle = 'rgba(230,126,34,0.5)';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(2, y+2, CW-4, h-4);
+    }
+
+    if (i > 0) {
+      ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(CW,y); ctx.stroke();
+    }
+
+    const locRaw = t.location.length > 16 ? t.location.slice(0,15)+'\\u2026' : t.location;
+    ctx.fillStyle = '#AAAACC';
+    ctx.font = (i===0?'15px':'13px') + ' -apple-system, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('\\u{1F4CD} ' + locRaw, 16, y + (i===0?30:22));
+
+    let timeText, timeColor;
+    if (isDone)     { timeText='\\u2705 \\u5df2\\u91cd\\u751f';             timeColor='#666688'; }
+    else if(isRed)  { timeText='\\u{1F6A8} '+fmt(rem); timeColor='#E74C3C'; }
+    else if(isOra)  { timeText='\\u26a0\\ufe0f '+fmt(rem); timeColor='#E67E22'; }
+    else            { timeText='\\u{1F344} '+fmt(rem); timeColor='#2ECC71'; }
+
+    ctx.fillStyle = timeColor;
+    ctx.font = 'bold '+(i===0?'44':'30')+'px Courier New, monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText(timeText, CW-16, y+h-(i===0?18:12));
+  });
+
+  if (timers.length > 2) {
+    ctx.fillStyle = '#1A2030';
+    ctx.fillRect(0, CH-20, CW, 20);
+    ctx.fillStyle = '#555577';
+    ctx.font = '11px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('\\u53e6\\u6709 '+(timers.length-2)+' \\u500b\\u853a\\u83c7', CW/2, CH-5);
+  }
+}
+
+// 初始化 canvas stream → video → PiP
+function initStream() {
+  try {
+    const stream = canvas.captureStream(4);
+    video.srcObject = stream;
+    video.play().then(() => {
+      btn.textContent = '▶ 開啟子母畫面';
+      statusEl.textContent = '準備就緒，點擊開啟子母畫面';
+    }).catch(e => {
+      statusEl.textContent = '⚠️ 請點擊頁面後再試';
+    });
+  } catch(e) {
+    statusEl.textContent = '⚠️ 此環境不支援子母畫面';
+    btn.disabled = true;
+  }
+}
+
+function togglePip() {
+  if (pipActive) {
+    stopPip();
+  } else {
+    startPip();
+  }
+}
+
+function startPip() {
+  if (!drawTimer) {
+    draw();
+    drawTimer = setInterval(draw, 250);
+  }
+  const tryPip = () => {
+    if (typeof video.webkitSetPresentationMode === 'function') {
+      video.webkitSetPresentationMode('picture-in-picture');
+      pipActive = true;
+      btn.textContent = '■ 關閉子母畫面';
+      btn.className = 'btn stop';
+    } else if (typeof video.requestPictureInPicture === 'function') {
+      video.requestPictureInPicture().then(() => {
+        pipActive = true;
+        btn.textContent = '■ 關閉子母畫面';
+        btn.className = 'btn stop';
+      }).catch(e => {
+        statusEl.textContent = '⚠️ 無法開啟：' + (e.message||e);
+      });
+    } else {
+      statusEl.textContent = '⚠️ 此裝置不支援子母畫面功能';
+    }
+  };
+  if (video.paused) {
+    video.play().then(tryPip).catch(e => {
+      statusEl.textContent = '⚠️ 影像未就緒：' + (e.message||e);
+    });
+  } else {
+    tryPip();
+  }
+}
+
+function stopPip() {
+  try {
+    if (document.pictureInPictureElement) {
+      document.exitPictureInPicture();
+    } else if (video.webkitPresentationMode==='picture-in-picture') {
+      video.webkitSetPresentationMode('inline');
+    }
+  } catch(e) {}
+  pipActive = false;
+  btn.textContent = '▶ 開啟子母畫面';
+  btn.className = 'btn';
+}
+
+video.addEventListener('leavepictureinpicture', () => {
+  pipActive = false;
+  btn.textContent = '▶ 開啟子母畫面';
+  btn.className = 'btn';
+});
+video.addEventListener('webkitpresentationmodechanged', () => {
+  if (video.webkitPresentationMode !== 'picture-in-picture') {
+    pipActive = false;
+    btn.textContent = '▶ 開啟子母畫面';
+    btn.className = 'btn';
+  }
+});
+
+// 啟動
+draw();
+drawTimer = setInterval(draw, 250);
+initStream();
+<\/script>
+</body>
+</html>`;
+
+  if (pipWin && !pipWin.closed) {
+    pipWin.focus();
+    syncTimers();
+    return;
+  }
+
+  pipWin = window.open('', 'pip_window',
+    'width=420,height=480,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=no'
+  );
+
+  if (!pipWin) {
+    showToast('⚠️ 請允許彈出視窗，或在 Safari 設定中開啟');
+    return;
+  }
+
+  pipWin.document.open();
+  pipWin.document.write(pipHtml);
+  pipWin.document.close();
+}
+
+// ═══════════════════════════════
 // 子母畫面（Canvas → Video Stream → PiP）
 // iOS PWA 相容版本
 // ═══════════════════════════════
@@ -774,85 +1055,57 @@ function stopPipDraw() {
   if (pipDrawInterval) { clearInterval(pipDrawInterval); pipDrawInterval = null; }
 }
 
-// ═══════════════════════════════
-// iOS PWA PiP 修復版
-// 問題：
-//   1. captureStream() 在 iOS 不支援 → video.srcObject 無法用 canvas stream
-//   2. async/await play() 打破 user gesture 同步鏈 → "not triggered by user activation"
-//   3. video 放在螢幕外 (-9999px) 可能被 iOS 視為不可見
-// 解法：
-//   1. video src 改用內嵌 base64 MP4（真實來源，iOS 可正常播放）
-//   2. 頁面載入時立刻嘗試 play()；若失敗，第一次 touch 時再試
-//   3. 按鈕觸發時：video 已在播放 → 同步呼叫 webkitSetPresentationMode（無 await）
-//   4. PiP 視窗會顯示靜音黑色背景；計時資訊繼續在主畫面更新
-// ═══════════════════════════════
-let pipVideoReady = false;
-
-function initPipVideo() {
-  if (pipVideoReady) return;
-  // video src 已在 HTML 設定（base64 MP4），直接嘗試 play
-  pipVideo.play().then(() => {
-    pipVideoReady = true;
-    console.log('PiP video ready');
-  }).catch(err => {
-    // muted video 在 iOS PWA 通常可以自動播放，若失敗等待 user gesture
-    console.warn('video autoplay blocked, will retry on gesture:', err.message);
-  });
-}
-
-// 在第一次 user gesture 時確保 video 已播放
-function ensureVideoPlaying() {
-  if (pipVideoReady && !pipVideo.paused) return Promise.resolve();
-  return pipVideo.play().then(() => {
-    pipVideoReady = true;
-  });
-}
-
-// ── 觸發 PiP（同步版，iOS PWA 相容）──
-function doPipRequest() {
-  // iOS Safari / iOS PWA 優先使用 webkit API（同步，不破壞 gesture chain）
-  if (typeof pipVideo.webkitSetPresentationMode === 'function') {
-    pipVideo.webkitSetPresentationMode('picture-in-picture');
-    pipActive = true;
-    updatePipBtn();
-    return;
+// ── iOS PWA 相容：預先初始化 video srcObject ──
+// captureStream 必須在頁面載入後同步完成，不能等到按鈕按下才做
+let pipStreamReady = false;
+function initPipStream() {
+  if (pipStreamReady) return;
+  try {
+    const stream = pipCanvas.captureStream(4);
+    pipVideo.srcObject = stream;
+    pipStreamReady = true;
+  } catch(e) {
+    console.warn('captureStream 不支援', e);
   }
-  // 非 iOS（Chrome/Firefox）使用標準 API（允許 Promise）
-  if (typeof pipVideo.requestPictureInPicture === 'function') {
-    pipVideo.requestPictureInPicture().then(() => {
+}
+
+// ── video 必須先 play() 才能觸發 PiP；iOS 要求在 user gesture 內同步呼叫 ──
+async function startPip() {
+  try {
+    initPipStream();
+    startPipDraw();
+
+    // play() 必須在 user gesture 的同一個 call stack 內
+    if (pipVideo.paused) {
+      await pipVideo.play();
+    }
+
+    // 觸發 PiP（標準 API）
+    if (typeof pipVideo.requestPictureInPicture === 'function') {
+      await pipVideo.requestPictureInPicture();
       pipActive = true;
       updatePipBtn();
-    }).catch(e => {
-      showToast('⚠️ 無法開啟子母畫面：' + (e.message || e));
-      stopPipDraw();
-    });
-    return;
-  }
-  showToast('⚠️ 此環境不支援子母畫面');
-  stopPipDraw();
-}
-
-function startPip() {
-  startPipDraw();
-
-  if (pipVideoReady && !pipVideo.paused) {
-    // video 已在播放 → 直接同步觸發（iOS PWA 的理想路徑）
-    doPipRequest();
-  } else {
-    // video 尚未播放 → 在當前 gesture context 中 play 後立刻觸發
-    ensureVideoPlaying().then(() => {
-      doPipRequest();
-    }).catch(e => {
-      showToast('⚠️ 無法啟動影像：' + (e.message || e));
-      stopPipDraw();
-    });
+      return;
+    }
+    // iOS Safari / iOS PWA（webkit API）
+    if (typeof pipVideo.webkitSetPresentationMode === 'function') {
+      pipVideo.webkitSetPresentationMode('picture-in-picture');
+      pipActive = true;
+      updatePipBtn();
+      return;
+    }
+    showToast('⚠️ 此環境不支援子母畫面');
+  } catch(e) {
+    showToast('⚠️ 無法開啟子母畫面：' + (e.message || e));
+    console.error('PiP error', e);
+    stopPipDraw();
   }
 }
 
-function stopPip() {
+async function stopPip() {
   try {
     if (document.pictureInPictureElement) {
-      document.exitPictureInPicture().catch(() => {});
+      await document.exitPictureInPicture();
     } else if (pipVideo.webkitPresentationMode === 'picture-in-picture') {
       pipVideo.webkitSetPresentationMode('inline');
     }
@@ -862,8 +1115,8 @@ function stopPip() {
   updatePipBtn();
 }
 
-function togglePip() {
-  if (pipActive) { stopPip(); } else { startPip(); }
+async function togglePip() {
+  if (pipActive) { await stopPip(); } else { await startPip(); }
 }
 
 function updatePipBtn() {
@@ -954,6 +1207,7 @@ function addTimer() {
   document.getElementById('loc-input').value = '';
   ['t-hour','t-min','t-sec'].forEach(id => document.getElementById(id).value = '');
   if (currentTab === 1) renderTimerList();
+  syncTimers();
 }
 
 function scheduleNotifs(timer, totalSec) {
@@ -977,6 +1231,7 @@ function scheduleNotifs(timer, totalSec) {
       setTimeout(() => {
         timers = timers.filter(t => t.id !== timer.id);
         renderTimerList();
+        syncTimers();
       }, 10000);
     }
   }, totalSec * 1000);
@@ -985,6 +1240,7 @@ function scheduleNotifs(timer, totalSec) {
 function removeTimer(id) {
   timers = timers.filter(t => t.id !== id);
   renderTimerList();
+  syncTimers();
 }
 
 function formatTime(sec) {
@@ -1075,18 +1331,13 @@ applySettings();
 renderLocations();
 checkNotifBanner();
 startTick();
-// 頁面載入時立刻嘗試播放 video（muted video 在 iOS PWA 通常允許自動播放）
-initPipVideo();
-// 先畫一次 canvas
+// 頁面載入時初始化（傳統 captureStream 路線，非 iOS PWA 環境仍可用）
+initPipStream();
 drawPipFrame();
-
-// 備援：第一次 touchstart 時再試一次（處理 autoplay 被封鎖的情況）
-document.addEventListener('touchstart', function pipVideoInit() {
-  if (!pipVideoReady || pipVideo.paused) {
-    pipVideo.play().then(() => { pipVideoReady = true; }).catch(() => {});
-  }
-  document.removeEventListener('touchstart', pipVideoInit, true);
-}, { once: true, capture: true, passive: true });
+// 初始同步計時器資料（給子視窗用）
+syncTimers();
+// 每 5 秒定期同步，確保子視窗資料最新
+setInterval(syncTimers, 5000);
 </script>
 </body>
 </html>
