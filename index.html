@@ -297,10 +297,10 @@
 </head>
 <body>
 
-<!-- 隱藏 Canvas + Video（子母畫面用） -->
-<canvas id="pip-canvas" width="400" height="300" style="display:none"></canvas>
-<video id="pip-video" muted playsinline autoplay loop
-  style="position:fixed;bottom:-9999px;left:-9999px;width:1px;height:1px;opacity:0.01;pointer-events:none">
+<!-- Canvas + Video（子母畫面用）：iOS PWA 需要 video 有實際尺寸且可見才能觸發 PiP -->
+<canvas id="pip-canvas" width="400" height="300" style="position:fixed;bottom:-9999px;left:-9999px;width:400px;height:300px;pointer-events:none"></canvas>
+<video id="pip-video" muted playsinline webkit-playsinline
+  style="position:fixed;bottom:-9999px;left:-9999px;width:400px;height:300px;opacity:0.01;pointer-events:none">
 </video>
 
 <!-- Header -->
@@ -344,9 +344,9 @@
     <div class="pip-card">
       <div class="pip-card-title">▶ 子母畫面使用方式</div>
       <div class="pip-card-body">
-        點擊右上角「▶ 子母畫面」按鈕，即可在懸浮小視窗中顯示倒數清單。<br>
+        點擊右上角「▶ 子母畫面」按鈕，即可在懸浮小視窗中顯示最近兩個蘑菇的倒數。<br>
         切換到遊戲時，計時器仍會持續顯示在畫面角落。<br>
-        <span style="color:var(--warning)">⚠️ iOS 需先允許「畫中畫」功能：設定 → 一般 → 畫中畫 → 開啟</span>
+        <span style="color:var(--warning)">⚠️ iOS 需先：① 至設定 → 一般 → 畫中畫 → 開啟 ② 將本頁加入主畫面後從主畫面開啟，再按子母畫面按鈕</span>
       </div>
     </div>
 
@@ -634,142 +634,183 @@ function testNotification() {
 
 // ═══════════════════════════════
 // 子母畫面（Canvas → Video Stream → PiP）
+// iOS PWA 相容版本
 // ═══════════════════════════════
 const pipCanvas = document.getElementById('pip-canvas');
 const pipVideo  = document.getElementById('pip-video');
 const pipCtx    = pipCanvas.getContext('2d');
 let pipActive   = false;
-let pipRAF      = null;
+let pipDrawInterval = null;
 
-// Canvas 尺寸（子母畫面顯示比例）
+// Canvas 尺寸 4:3，兩個蘑菇用
 const CW = 400, CH = 300;
 pipCanvas.width = CW; pipCanvas.height = CH;
 
+// ── 繪製單格畫面 ──────────────────────────────
 function drawPipFrame() {
   const now = Date.now();
-  const sorted = [...timers].sort((a, b) => a.endTime - b.endTime).slice(0, 3);
+  // 只取最近兩個
+  const sorted = [...timers].sort((a, b) => a.endTime - b.endTime).slice(0, 2);
 
   // 背景
   pipCtx.fillStyle = '#0D1B2A';
   pipCtx.fillRect(0, 0, CW, CH);
 
-  // 標題列
+  // ── 標題列 ──
   pipCtx.fillStyle = '#16213E';
-  pipCtx.fillRect(0, 0, CW, 48);
-  pipCtx.fillStyle = '#FFFFFF';
-  pipCtx.font = 'bold 20px -apple-system, sans-serif';
+  pipCtx.fillRect(0, 0, CW, 44);
+  pipCtx.fillStyle = '#2ECC71';
+  pipCtx.font = 'bold 18px -apple-system, sans-serif';
   pipCtx.textAlign = 'left';
-  pipCtx.fillText('🍄 蘑菇計時器', 16, 32);
-
-  // 時間小字
+  pipCtx.fillText('🍄 蘑菇計時器', 14, 29);
   const timeStr = new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  pipCtx.fillStyle = '#888888';
+  pipCtx.fillStyle = '#666688';
   pipCtx.font = '13px -apple-system, sans-serif';
   pipCtx.textAlign = 'right';
-  pipCtx.fillText(timeStr, CW - 16, 32);
+  pipCtx.fillText(timeStr, CW - 14, 29);
 
+  // ── 無蘑菇 ──
   if (sorted.length === 0) {
-    pipCtx.fillStyle = '#888888';
-    pipCtx.font = '18px -apple-system, sans-serif';
+    pipCtx.fillStyle = '#555577';
+    pipCtx.font = '17px -apple-system, sans-serif';
     pipCtx.textAlign = 'center';
-    pipCtx.fillText('目前沒有進行中的蘑菇', CW / 2, CH / 2);
+    pipCtx.fillText('目前沒有進行中的蘑菇', CW / 2, CH / 2 - 10);
+    pipCtx.font = '36px serif';
     pipCtx.fillText('🍄', CW / 2, CH / 2 + 36);
     return;
   }
 
-  const itemH = (CH - 56) / Math.max(sorted.length, 1);
+  // ── 兩欄分佈（1 個或 2 個）──
+  // 第 0 個（最近的）用較大字；第 1 個（次近的）用較小字
+  const HEADER_H = 44;
+  const CONTENT_H = CH - HEADER_H;
 
   sorted.forEach((t, i) => {
-    const rem = Math.floor((t.endTime - now) / 1000);
-    const y = 56 + i * itemH;
-    const isWarn = rem >= 0 && rem <= 30;
+    const rem    = Math.floor((t.endTime - now) / 1000);
     const isDone = rem <= 0;
+    const isRed  = !isDone && rem <= 10;
+    const isOra  = !isDone && rem > 10 && rem <= 30;
+
+    // 每項高度：第 0 個佔 60%，第 1 個佔 40%
+    const heights = [Math.floor(CONTENT_H * 0.60), Math.floor(CONTENT_H * 0.40)];
+    const h = sorted.length === 1 ? CONTENT_H : heights[i];
+    const y = HEADER_H + (i === 0 ? 0 : heights[0]);
 
     // 列背景
-    pipCtx.fillStyle = i % 2 === 0 ? '#16213E' : '#1A2744';
-    pipCtx.fillRect(0, y, CW, itemH);
+    pipCtx.fillStyle = i === 0 ? '#16213E' : '#111828';
+    pipCtx.fillRect(0, y, CW, h);
 
-    // 警示時紅色邊框閃爍
-    if (isWarn && !isDone) {
-      const alpha = 0.4 + 0.6 * Math.abs(Math.sin(now / 400));
+    // 閃爍紅框（最後 10 秒）
+    if (isRed) {
+      const alpha = 0.35 + 0.65 * Math.abs(Math.sin(now / 300));
       pipCtx.strokeStyle = `rgba(231,76,60,${alpha})`;
+      pipCtx.lineWidth = 4;
+      pipCtx.strokeRect(2, y + 2, CW - 4, h - 4);
+    }
+    // 橘框（最後 30 秒）
+    if (isOra) {
+      pipCtx.strokeStyle = 'rgba(230,126,34,0.5)';
       pipCtx.lineWidth = 3;
-      pipCtx.strokeRect(1.5, y + 1.5, CW - 3, itemH - 3);
+      pipCtx.strokeRect(2, y + 2, CW - 4, h - 4);
     }
 
-    // 排名圓點
-    const rankColors = ['#E74C3C', '#E67E22', '#2ECC71'];
-    pipCtx.fillStyle = rankColors[i] || '#2ECC71';
-    pipCtx.beginPath();
-    pipCtx.arc(28, y + itemH / 2, 14, 0, Math.PI * 2);
-    pipCtx.fill();
-    pipCtx.fillStyle = '#FFFFFF';
-    pipCtx.font = 'bold 14px -apple-system, sans-serif';
-    pipCtx.textAlign = 'center';
-    pipCtx.fillText(i + 1, 28, y + itemH / 2 + 5);
+    // 分隔線
+    if (i > 0) {
+      pipCtx.strokeStyle = 'rgba(255,255,255,0.06)';
+      pipCtx.lineWidth = 1;
+      pipCtx.beginPath();
+      pipCtx.moveTo(0, y); pipCtx.lineTo(CW, y);
+      pipCtx.stroke();
+    }
 
-    // 地點
-    pipCtx.fillStyle = '#CCCCCC';
-    pipCtx.font = '13px -apple-system, sans-serif';
+    // 地點名稱
+    const locMaxLen = i === 0 ? 16 : 20;
+    const locRaw = t.location.length > locMaxLen ? t.location.slice(0, locMaxLen - 1) + '…' : t.location;
+    const locFont  = i === 0 ? '15px -apple-system, sans-serif' : '13px -apple-system, sans-serif';
+    pipCtx.fillStyle = '#AAAACC';
+    pipCtx.font = locFont;
     pipCtx.textAlign = 'left';
-    const locText = '📍 ' + (t.location.length > 14 ? t.location.slice(0, 13) + '…' : t.location);
-    pipCtx.fillText(locText, 52, y + itemH / 2 - 8);
+    pipCtx.fillText('📍 ' + locRaw, 16, y + (i === 0 ? 30 : 22));
 
-    // 倒數時間
+    // 倒數時間（大字）
     let timeText, timeColor;
-    if (isDone)        { timeText = '✅ 已重生';              timeColor = '#888888'; }
-    else if (rem <= 10){ timeText = '🚨 ' + formatTime(rem);  timeColor = '#E74C3C'; }
-    else if (rem <= 30){ timeText = '⚠️ ' + formatTime(rem);  timeColor = '#E67E22'; }
-    else               { timeText = '🍄 ' + formatTime(rem);  timeColor = '#2ECC71'; }
+    if (isDone)       { timeText = '✅ 已重生';             timeColor = '#666688'; }
+    else if (isRed)   { timeText = '🚨 ' + formatTime(rem); timeColor = '#E74C3C'; }
+    else if (isOra)   { timeText = '⚠️ ' + formatTime(rem); timeColor = '#E67E22'; }
+    else              { timeText = '🍄 ' + formatTime(rem); timeColor = '#2ECC71'; }
 
+    const timeFont = i === 0 ? 'bold 44px Courier New, monospace' : 'bold 30px Courier New, monospace';
     pipCtx.fillStyle = timeColor;
-    pipCtx.font = 'bold 22px Courier New, monospace';
+    pipCtx.font = timeFont;
     pipCtx.textAlign = 'right';
-    pipCtx.fillText(timeText, CW - 16, y + itemH / 2 + 10);
+    pipCtx.fillText(timeText, CW - 16, y + h - (i === 0 ? 18 : 12));
   });
 
-  // 底部蘑菇數量
-  pipCtx.fillStyle = '#444466';
-  pipCtx.fillRect(0, CH - 22, CW, 22);
-  pipCtx.fillStyle = '#666688';
-  pipCtx.font = '12px -apple-system, sans-serif';
-  pipCtx.textAlign = 'center';
-  pipCtx.fillText(`共 ${timers.length} 個蘑菇`, CW / 2, CH - 6);
+  // ── 底部：蘑菇總數 ──
+  if (timers.length > 2) {
+    pipCtx.fillStyle = '#1A2030';
+    pipCtx.fillRect(0, CH - 20, CW, 20);
+    pipCtx.fillStyle = '#555577';
+    pipCtx.font = '11px -apple-system, sans-serif';
+    pipCtx.textAlign = 'center';
+    pipCtx.fillText(`另有 ${timers.length - 2} 個蘑菇`, CW / 2, CH - 5);
+  }
 }
 
-function pipLoop() {
-  drawPipFrame();
-  pipRAF = requestAnimationFrame(pipLoop);
+// ── 持續繪製（每秒更新即可，節省電量）──
+function startPipDraw() {
+  drawPipFrame(); // 立刻畫一次
+  if (pipDrawInterval) clearInterval(pipDrawInterval);
+  pipDrawInterval = setInterval(drawPipFrame, 250); // 4fps，夠流暢又省電
+}
+function stopPipDraw() {
+  if (pipDrawInterval) { clearInterval(pipDrawInterval); pipDrawInterval = null; }
 }
 
+// ── iOS PWA 相容：預先初始化 video srcObject ──
+// captureStream 必須在頁面載入後同步完成，不能等到按鈕按下才做
+let pipStreamReady = false;
+function initPipStream() {
+  if (pipStreamReady) return;
+  try {
+    const stream = pipCanvas.captureStream(4);
+    pipVideo.srcObject = stream;
+    pipStreamReady = true;
+  } catch(e) {
+    console.warn('captureStream 不支援', e);
+  }
+}
+
+// ── video 必須先 play() 才能觸發 PiP；iOS 要求在 user gesture 內同步呼叫 ──
 async function startPip() {
   try {
-    // 初始化 Canvas 串流
-    if (!pipVideo.srcObject) {
-      const stream = pipCanvas.captureStream(30);
-      pipVideo.srcObject = stream;
+    initPipStream();
+    startPipDraw();
+
+    // play() 必須在 user gesture 的同一個 call stack 內
+    if (pipVideo.paused) {
+      await pipVideo.play();
     }
-    await pipVideo.play();
 
-    // 開始持續繪製
-    if (!pipRAF) pipLoop();
-
-    // 觸發 PiP
+    // 觸發 PiP（標準 API）
     if (typeof pipVideo.requestPictureInPicture === 'function') {
       await pipVideo.requestPictureInPicture();
       pipActive = true;
       updatePipBtn();
-    } else if (typeof pipVideo.webkitSetPresentationMode === 'function') {
-      // iOS Safari
+      return;
+    }
+    // iOS Safari / iOS PWA（webkit API）
+    if (typeof pipVideo.webkitSetPresentationMode === 'function') {
       pipVideo.webkitSetPresentationMode('picture-in-picture');
       pipActive = true;
       updatePipBtn();
-    } else {
-      showToast('⚠️ 此瀏覽器不支援子母畫面');
+      return;
     }
+    showToast('⚠️ 此環境不支援子母畫面');
   } catch(e) {
-    showToast('⚠️ 無法開啟子母畫面：' + (e.message || '請確認已允許畫中畫'));
-    console.error(e);
+    showToast('⚠️ 無法開啟子母畫面：' + (e.message || e));
+    console.error('PiP error', e);
+    stopPipDraw();
   }
 }
 
@@ -782,15 +823,12 @@ async function stopPip() {
     }
   } catch(_) {}
   pipActive = false;
+  stopPipDraw();
   updatePipBtn();
 }
 
 async function togglePip() {
-  if (pipActive) {
-    await stopPip();
-  } else {
-    await startPip();
-  }
+  if (pipActive) { await stopPip(); } else { await startPip(); }
 }
 
 function updatePipBtn() {
@@ -807,7 +845,16 @@ function updatePipBtn() {
 // 監聽 PiP 被使用者手動關閉
 pipVideo.addEventListener('leavepictureinpicture', () => {
   pipActive = false;
+  stopPipDraw();
   updatePipBtn();
+});
+// iOS webkit 對應事件
+pipVideo.addEventListener('webkitpresentationmodechanged', () => {
+  if (pipVideo.webkitPresentationMode !== 'picture-in-picture') {
+    pipActive = false;
+    stopPipDraw();
+    updatePipBtn();
+  }
 });
 
 // ═══════════════════════════════
@@ -993,8 +1040,10 @@ applySettings();
 renderLocations();
 checkNotifBanner();
 startTick();
-// PiP Canvas 預先開始繪製（讓 video 有內容）
-pipLoop();
+// 預先初始化 PiP stream（必須在頁面載入時就建立，iOS PWA 才能用）
+initPipStream();
+// 先畫一次，讓 video 有初始內容
+drawPipFrame();
 </script>
 </body>
 </html>
