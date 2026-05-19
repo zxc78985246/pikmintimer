@@ -34,21 +34,30 @@
   /* ── Header ── */
   .header {
     background: var(--bg2);
-    padding: 16px 20px 12px;
+    padding: 12px 14px 10px;
     border-bottom: 1px solid rgba(46,204,113,0.15);
     display: flex; align-items: center; gap: 10px;
     position: sticky; top: 0; z-index: 10;
   }
-  .header-icon { font-size: 28px; }
-  .header-title { font-size: 18px; font-weight: 700; letter-spacing: 1px; }
-  .header-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
-  .header-right { margin-left: auto; display: flex; gap: 8px; }
+  .header-icon { font-size: 26px; flex-shrink: 0; }
+  .header-title { font-size: 16px; font-weight: 700; letter-spacing: 1px; }
+  .header-sub { font-size: 10px; color: var(--text3); margin-top: 1px; }
+  .header-right { margin-left: auto; display: flex; gap: 6px; flex-shrink: 0; }
   .header-btn {
     background: var(--blue); border: none; color: var(--text2);
-    font-size: 12px; padding: 6px 12px; border-radius: 8px;
-    cursor: pointer; font-family: inherit;
+    font-size: 11px; padding: 6px 10px; border-radius: 8px;
+    cursor: pointer; font-family: inherit; white-space: nowrap;
   }
   .header-btn:active { opacity: 0.7; }
+  .pip-btn {
+    background: var(--accent) !important;
+    color: #000 !important;
+    font-weight: 700 !important;
+  }
+  .pip-btn.active {
+    background: var(--danger) !important;
+    color: #fff !important;
+  }
 
   /* ── Main ── */
   .main { padding: 16px; padding-bottom: 120px; }
@@ -64,7 +73,7 @@
   }
   .tab-btn {
     flex: 1; background: none; border: none; color: var(--text3);
-    font-size: 14px; padding: 10px 0; border-radius: 12px;
+    font-size: 13px; padding: 10px 0; border-radius: 12px;
     cursor: pointer; font-family: inherit; font-weight: 500; transition: all 0.2s;
   }
   .tab-btn.active { background: var(--blue); color: var(--text); }
@@ -117,7 +126,6 @@
   }
   .btn:active { opacity: 0.8; transform: scale(0.98); }
   .btn-green { background: var(--accent); color: #fff; }
-  .btn-red   { background: var(--danger); color: #fff; }
   .btn-blue  { background: var(--blue); color: var(--text2); }
   .btn-gray  { background: #3a3a5c; color: var(--text2); }
   .btn-sm    { padding: 8px 14px; font-size: 13px; border-radius: 10px; width: auto; }
@@ -129,11 +137,11 @@
     border-bottom: 1px solid rgba(255,255,255,0.06);
     gap: 12px;
   }
-  .setting-row:last-child { border-bottom: none; }
-  .setting-label { flex: 1; font-size: 14px; color: var(--text2); }
+  .setting-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .setting-label { font-size: 14px; color: var(--text2); }
   .setting-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
 
-  /* ── Toggle switch ── */
+  /* ── Toggle ── */
   .toggle { position: relative; width: 46px; height: 26px; flex-shrink: 0; }
   .toggle input { opacity: 0; width: 0; height: 0; }
   .toggle-slider {
@@ -162,7 +170,6 @@
     font-size: 12px; padding: 4px 10px; border-radius: 6px;
     cursor: pointer; font-family: inherit;
   }
-  .sound-preview-btn:active { opacity: 0.7; }
 
   /* ── Timer list ── */
   .timer-item {
@@ -234,8 +241,6 @@
   /* ── 說明 ── */
   .help-step-title { font-size: 14px; font-weight: 700; color: var(--accent); margin-top: 20px; margin-bottom: 4px; }
   .help-step-body { font-size: 13px; color: var(--text2); line-height: 1.7; }
-
-  /* ── Install steps ── */
   .section-label { font-size: 11px; color: var(--text3); letter-spacing: 1px; margin-bottom: 8px; }
   .install-steps { list-style: none; padding: 0; }
   .install-steps li {
@@ -274,17 +279,31 @@
     color: #fff; font-size: 12px; padding: 6px 12px; border-radius: 8px;
     cursor: pointer; font-family: inherit; white-space: nowrap; flex-shrink: 0;
   }
-
-  /* ── iOS 限制提示 ── */
   .ios-notice {
     background: rgba(231,126,22,0.1); border: 1px solid rgba(231,126,22,0.3);
     border-radius: 10px; padding: 10px 12px; font-size: 12px;
     color: var(--warning); line-height: 1.6; margin-top: 8px;
   }
+
+  /* ── 子母畫面說明卡片 ── */
+  .pip-card {
+    background: linear-gradient(135deg, rgba(46,204,113,0.1), rgba(15,52,96,0.5));
+    border: 1px solid rgba(46,204,113,0.3);
+    border-radius: var(--radius); padding: 16px; margin-bottom: 12px;
+  }
+  .pip-card-title { font-size: 14px; font-weight: 700; color: var(--accent); margin-bottom: 8px; }
+  .pip-card-body { font-size: 13px; color: var(--text2); line-height: 1.7; }
 </style>
 </head>
 <body>
 
+<!-- 隱藏 Canvas + Video（子母畫面用） -->
+<canvas id="pip-canvas" width="400" height="300" style="display:none"></canvas>
+<video id="pip-video" muted playsinline autoplay loop
+  style="position:fixed;bottom:-9999px;left:-9999px;width:1px;height:1px;opacity:0.01;pointer-events:none">
+</video>
+
+<!-- Header -->
 <div class="header">
   <div class="header-icon">🍄</div>
   <div>
@@ -292,11 +311,13 @@
     <div class="header-sub">Pikmin Bloom</div>
   </div>
   <div class="header-right">
+    <button class="header-btn pip-btn" id="pip-btn" onclick="togglePip()">▶ 子母畫面</button>
     <button class="header-btn" onclick="openModal('modal-help')">說明</button>
     <button class="header-btn" onclick="openModal('modal-install')">加入主畫面</button>
   </div>
 </div>
 
+<!-- Main -->
 <div class="main">
 
   <div id="pwa-banner">
@@ -310,6 +331,7 @@
     <button onclick="requestNotifPermission()">開啟</button>
   </div>
 
+  <!-- Tab -->
   <div class="tab-row">
     <button class="tab-btn active" id="tab0" onclick="switchTab(0)">➕ 新增蘑菇</button>
     <button class="tab-btn" id="tab1" onclick="switchTab(1)">⏱ 倒數清單</button>
@@ -318,6 +340,16 @@
 
   <!-- 分頁 0：新增蘑菇 -->
   <div id="page0">
+    <!-- 子母畫面說明 -->
+    <div class="pip-card">
+      <div class="pip-card-title">▶ 子母畫面使用方式</div>
+      <div class="pip-card-body">
+        點擊右上角「▶ 子母畫面」按鈕，即可在懸浮小視窗中顯示倒數清單。<br>
+        切換到遊戲時，計時器仍會持續顯示在畫面角落。<br>
+        <span style="color:var(--warning)">⚠️ iOS 需先允許「畫中畫」功能：設定 → 一般 → 畫中畫 → 開啟</span>
+      </div>
+    </div>
+
     <div class="card">
       <div class="card-title">常用地點</div>
       <div class="location-scroll" id="location-scroll"></div>
@@ -359,95 +391,66 @@
 
   <!-- 分頁 2：設定 -->
   <div id="page2" style="display:none">
-
-    <!-- 通知測試 -->
     <div class="card">
       <div class="card-title">通知與提醒測試</div>
-
       <div class="setting-row">
-        <div>
-          <div class="setting-label">🔔 測試通知</div>
-          <div class="setting-sub">點擊後立即發送一則測試通知</div>
-        </div>
+        <div><div class="setting-label">🔔 測試通知</div><div class="setting-sub">立即發送一則測試通知</div></div>
         <button class="btn btn-blue btn-sm" onclick="testNotification()">發送測試</button>
       </div>
-
       <div class="setting-row">
-        <div>
-          <div class="setting-label">🔊 測試音效</div>
-          <div class="setting-sub">播放目前選擇的提醒音效</div>
-        </div>
+        <div><div class="setting-label">🔊 測試音效</div><div class="setting-sub">播放目前選擇的提醒音效</div></div>
         <button class="btn btn-blue btn-sm" onclick="playSelectedSound()">播放</button>
       </div>
-
       <div class="setting-row">
-        <div>
-          <div class="setting-label">📳 測試震動</div>
-          <div class="setting-sub">Android 支援，iOS 不支援</div>
-        </div>
+        <div><div class="setting-label">📳 測試震動</div><div class="setting-sub">Android 支援，iOS 不支援</div></div>
         <button class="btn btn-blue btn-sm" onclick="testVibration()">震動</button>
       </div>
     </div>
 
-    <!-- 音效選擇 -->
     <div class="card">
       <div class="card-title">提醒音效</div>
       <div class="sound-options" id="sound-options">
         <div class="sound-option" data-sound="beep" onclick="selectSound('beep')">
-          <span>🔔</span>
-          <span class="sound-option-label">嗶嗶聲（預設）</span>
-          <button class="sound-preview-btn" onclick="event.stopPropagation(); previewSound('beep')">試聽</button>
+          <span>🔔</span><span class="sound-option-label">嗶嗶聲（預設）</span>
+          <button class="sound-preview-btn" onclick="event.stopPropagation();previewSound('beep')">試聽</button>
         </div>
         <div class="sound-option" data-sound="chime" onclick="selectSound('chime')">
-          <span>🎵</span>
-          <span class="sound-option-label">鈴聲</span>
-          <button class="sound-preview-btn" onclick="event.stopPropagation(); previewSound('chime')">試聽</button>
+          <span>🎵</span><span class="sound-option-label">鈴聲</span>
+          <button class="sound-preview-btn" onclick="event.stopPropagation();previewSound('chime')">試聽</button>
         </div>
         <div class="sound-option" data-sound="alert" onclick="selectSound('alert')">
-          <span>🚨</span>
-          <span class="sound-option-label">警報聲</span>
-          <button class="sound-preview-btn" onclick="event.stopPropagation(); previewSound('alert')">試聽</button>
+          <span>🚨</span><span class="sound-option-label">警報聲</span>
+          <button class="sound-preview-btn" onclick="event.stopPropagation();previewSound('alert')">試聽</button>
         </div>
         <div class="sound-option" data-sound="none" onclick="selectSound('none')">
-          <span>🔕</span>
-          <span class="sound-option-label">靜音</span>
-          <button class="sound-preview-btn" onclick="event.stopPropagation();" style="opacity:0.3;pointer-events:none">試聽</button>
+          <span>🔕</span><span class="sound-option-label">靜音</span>
+          <button class="sound-preview-btn" style="opacity:0.3;pointer-events:none" onclick="event.stopPropagation()">試聽</button>
         </div>
       </div>
     </div>
 
-    <!-- 震動設定 -->
     <div class="card">
       <div class="card-title">震動設定</div>
       <div class="setting-row">
-        <div>
-          <div class="setting-label">📳 震動提醒</div>
-          <div class="setting-sub">Android 支援 · iOS 不支援</div>
-        </div>
+        <div><div class="setting-label">📳 震動提醒</div><div class="setting-sub">Android 支援 · iOS 不支援</div></div>
         <label class="toggle">
           <input type="checkbox" id="toggle-vibration" onchange="saveSettings()">
           <span class="toggle-slider"></span>
         </label>
       </div>
-      <div class="ios-notice">
-        ⚠️ iOS Safari 不支援網頁震動功能。若需要震動提醒，請使用 Android 裝置，或下載 Android 版 App。
-      </div>
+      <div class="ios-notice">⚠️ iOS Safari 不支援網頁震動功能。若需要震動提醒，請使用 Android 裝置或下載 Android 版 App。</div>
     </div>
 
-    <!-- iOS 限制說明 -->
     <div class="card">
       <div class="card-title">⚠️ iOS 通知限制說明</div>
-      <div style="font-size:13px; color:var(--text2); line-height:1.8;">
-        <p>由於 iOS 系統限制，以下情況通知可能無法正常發送：</p>
-        <br>
+      <div style="font-size:13px;color:var(--text2);line-height:1.8">
+        <p>由於 iOS 系統限制，以下情況通知可能無法正常發送：</p><br>
         <p>・子母畫面縮到螢幕邊緣時，網頁會被暫停執行</p>
         <p>・Safari 完全切到背景超過一段時間後</p>
-        <p>・螢幕鎖定時</p>
-        <br>
-        <p style="color:var(--accent)">💡 建議：保持畫面開啟，或使用 Android 版 App 以獲得最完整的提醒功能。</p>
+        <p>・螢幕鎖定時</p><br>
+        <p style="color:var(--accent)">💡 建議：使用子母畫面功能保持頁面可見，以獲得最穩定的提醒效果。</p>
       </div>
     </div>
-
   </div>
 </div>
 
@@ -461,20 +464,18 @@
        style="display:block;background:#FF0000;color:#fff;text-align:center;padding:12px;border-radius:12px;text-decoration:none;font-weight:700;font-size:14px;margin-bottom:4px">
       ▶ 觀看教學影片（YouTube）
     </a>
-    <div class="help-step-title">📍 第一步：新增常用地點</div>
+    <div class="help-step-title">▶ 子母畫面功能</div>
+    <div class="help-step-body">點右上角「▶ 子母畫面」按鈕，計時器會懸浮顯示在畫面角落，切換到遊戲後仍可看到倒數。iOS 需先至設定 → 一般 → 畫中畫 → 開啟。</div>
+    <div class="help-step-title">📍 新增常用地點</div>
     <div class="help-step-body">在「新增蘑菇」分頁輸入地點後按＋新增，之後點地點名稱可自動填入。</div>
-    <div class="help-step-title">🔔 第二步：開啟通知權限</div>
+    <div class="help-step-title">🔔 開啟通知權限</div>
     <div class="help-step-body">點畫面上方「開啟」按鈕授權通知，重生前 30 秒才能收到提醒。</div>
-    <div class="help-step-title">📱 第三步：加入主畫面</div>
+    <div class="help-step-title">📱 加入主畫面</div>
     <div class="help-step-body">點右上角「加入主畫面」，安裝後可離線使用，也能像 App 一樣開啟。</div>
-    <div class="help-step-title">🍄 第四步：記錄蘑菇</div>
+    <div class="help-step-title">🍄 記錄蘑菇</div>
     <div class="help-step-body">選好地點、輸入遊戲顯示的剩餘時間，點「✅ 記錄蘑菇」，系統自動加 5 分鐘重生冷卻。</div>
-    <div class="help-step-title">⏱ 第五步：查看倒數</div>
+    <div class="help-step-title">⏱ 查看倒數</div>
     <div class="help-step-body">切換到「⏱ 倒數清單」查看。重生前 30 秒發通知；倒數到 0 後 10 秒自動移除。</div>
-    <div class="help-step-title">⚙️ 設定分頁</div>
-    <div class="help-step-body">可測試通知、選擇音效、開關震動功能。</div>
-    <div class="help-step-title">💡 iOS 使用建議</div>
-    <div class="help-step-body">iOS Safari 可開啟分割畫面，將本頁放下半部，遊戲放上半部。請保持畫面可見以確保通知正常運作。</div>
     <button class="modal-close" onclick="closeModal('modal-help')">了解！</button>
   </div>
 </div>
@@ -498,74 +499,66 @@
       <li><div class="install-step-num">3</div><div>選「新增至主畫面」或「安裝應用程式」</div></li>
     </ul>
     <div class="divider"></div>
-    <div style="font-size:12px;color:var(--text3);line-height:1.6">
-      💡 安裝後從主畫面開啟，可全螢幕使用並在背景接收通知提醒。
-    </div>
+    <div style="font-size:12px;color:var(--text3);line-height:1.6">💡 安裝後從主畫面開啟，可全螢幕使用並在背景接收通知提醒。</div>
     <button class="modal-close" onclick="closeModal('modal-install')">關閉</button>
   </div>
 </div>
 
 <script>
+'use strict';
+
 // ═══════════════════════════════
-// 設定儲存
+// 設定
 // ═══════════════════════════════
 let settings = JSON.parse(localStorage.getItem('settings') || '{}');
 if (!settings.sound)     settings.sound     = 'beep';
-if (!settings.vibration) settings.vibration = false;
+if (settings.vibration === undefined) settings.vibration = false;
 
 function saveSettings() {
   settings.vibration = document.getElementById('toggle-vibration').checked;
   localStorage.setItem('settings', JSON.stringify(settings));
 }
-
 function selectSound(name) {
   settings.sound = name;
   localStorage.setItem('settings', JSON.stringify(settings));
-  document.querySelectorAll('.sound-option').forEach(el => {
-    el.classList.toggle('selected', el.dataset.sound === name);
-  });
+  document.querySelectorAll('.sound-option').forEach(el =>
+    el.classList.toggle('selected', el.dataset.sound === name)
+  );
   showToast('✅ 音效已更換');
 }
-
 function applySettings() {
   document.getElementById('toggle-vibration').checked = settings.vibration;
-  document.querySelectorAll('.sound-option').forEach(el => {
-    el.classList.toggle('selected', el.dataset.sound === settings.sound);
-  });
+  document.querySelectorAll('.sound-option').forEach(el =>
+    el.classList.toggle('selected', el.dataset.sound === settings.sound)
+  );
 }
 
 // ═══════════════════════════════
-// Web Audio 音效產生器
+// Web Audio 音效
 // ═══════════════════════════════
 let audioCtx = null;
 function getAudioCtx() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   return audioCtx;
 }
-
 function playBeep() {
   try {
     const ctx = getAudioCtx();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
+    const osc = ctx.createOscillator(), gain = ctx.createGain();
     osc.connect(gain); gain.connect(ctx.destination);
-    osc.frequency.value = 880;
-    osc.type = 'sine';
+    osc.frequency.value = 880; osc.type = 'sine';
     gain.gain.setValueAtTime(0.4, ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
     osc.start(); osc.stop(ctx.currentTime + 0.4);
   } catch(_) {}
 }
-
 function playChime() {
   try {
     const ctx = getAudioCtx();
     [523, 659, 784].forEach((freq, i) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
+      const osc = ctx.createOscillator(), gain = ctx.createGain();
       osc.connect(gain); gain.connect(ctx.destination);
-      osc.frequency.value = freq;
-      osc.type = 'sine';
+      osc.frequency.value = freq; osc.type = 'sine';
       const t = ctx.currentTime + i * 0.15;
       gain.gain.setValueAtTime(0.35, t);
       gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
@@ -573,16 +566,13 @@ function playChime() {
     });
   } catch(_) {}
 }
-
 function playAlert() {
   try {
     const ctx = getAudioCtx();
     [880, 660, 880, 660].forEach((freq, i) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
+      const osc = ctx.createOscillator(), gain = ctx.createGain();
       osc.connect(gain); gain.connect(ctx.destination);
-      osc.frequency.value = freq;
-      osc.type = 'square';
+      osc.frequency.value = freq; osc.type = 'square';
       const t = ctx.currentTime + i * 0.18;
       gain.gain.setValueAtTime(0.2, t);
       gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
@@ -590,14 +580,12 @@ function playAlert() {
     });
   } catch(_) {}
 }
-
 function playSound(name) {
   if (name === 'none') return;
   if (name === 'chime') playChime();
   else if (name === 'alert') playAlert();
   else playBeep();
 }
-
 function playSelectedSound() { playSound(settings.sound); }
 function previewSound(name)  { playSound(name); }
 
@@ -606,11 +594,8 @@ function previewSound(name)  { playSound(name); }
 // ═══════════════════════════════
 function vibrate() {
   if (!settings.vibration) return;
-  if ('vibrate' in navigator) {
-    navigator.vibrate([300, 100, 300]);
-  }
+  if ('vibrate' in navigator) navigator.vibrate([300, 100, 300]);
 }
-
 function testVibration() {
   if ('vibrate' in navigator) {
     navigator.vibrate([300, 100, 300, 100, 300]);
@@ -625,34 +610,22 @@ function testVibration() {
 // ═══════════════════════════════
 function checkNotifBanner() {
   if (!('Notification' in window)) return;
-  if (Notification.permission === 'default') {
+  if (Notification.permission === 'default')
     document.getElementById('notif-banner').style.display = 'flex';
-  }
 }
-
 function requestNotifPermission() {
   Notification.requestPermission().then(p => {
     document.getElementById('notif-banner').style.display = 'none';
-    if (p === 'granted') showToast('🔔 通知已開啟！');
-    else showToast('⚠️ 通知未授權，將無法發送提醒');
+    showToast(p === 'granted' ? '🔔 通知已開啟！' : '⚠️ 通知未授權，將無法發送提醒');
   });
 }
-
 function sendNotif(title, body) {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
   try { new Notification(title, { body }); } catch(_) {}
 }
-
 function testNotification() {
-  if (!('Notification' in window)) {
-    showToast('⚠️ 此瀏覽器不支援通知');
-    return;
-  }
-  if (Notification.permission !== 'granted') {
-    showToast('⚠️ 請先開啟通知權限');
-    requestNotifPermission();
-    return;
-  }
+  if (!('Notification' in window)) { showToast('⚠️ 此瀏覽器不支援通知'); return; }
+  if (Notification.permission !== 'granted') { requestNotifPermission(); return; }
   sendNotif('🍄 測試通知', '蘑菇計時器通知功能正常！');
   playSound(settings.sound);
   vibrate();
@@ -660,11 +633,188 @@ function testNotification() {
 }
 
 // ═══════════════════════════════
+// 子母畫面（Canvas → Video Stream → PiP）
+// ═══════════════════════════════
+const pipCanvas = document.getElementById('pip-canvas');
+const pipVideo  = document.getElementById('pip-video');
+const pipCtx    = pipCanvas.getContext('2d');
+let pipActive   = false;
+let pipRAF      = null;
+
+// Canvas 尺寸（子母畫面顯示比例）
+const CW = 400, CH = 300;
+pipCanvas.width = CW; pipCanvas.height = CH;
+
+function drawPipFrame() {
+  const now = Date.now();
+  const sorted = [...timers].sort((a, b) => a.endTime - b.endTime).slice(0, 3);
+
+  // 背景
+  pipCtx.fillStyle = '#0D1B2A';
+  pipCtx.fillRect(0, 0, CW, CH);
+
+  // 標題列
+  pipCtx.fillStyle = '#16213E';
+  pipCtx.fillRect(0, 0, CW, 48);
+  pipCtx.fillStyle = '#FFFFFF';
+  pipCtx.font = 'bold 20px -apple-system, sans-serif';
+  pipCtx.textAlign = 'left';
+  pipCtx.fillText('🍄 蘑菇計時器', 16, 32);
+
+  // 時間小字
+  const timeStr = new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  pipCtx.fillStyle = '#888888';
+  pipCtx.font = '13px -apple-system, sans-serif';
+  pipCtx.textAlign = 'right';
+  pipCtx.fillText(timeStr, CW - 16, 32);
+
+  if (sorted.length === 0) {
+    pipCtx.fillStyle = '#888888';
+    pipCtx.font = '18px -apple-system, sans-serif';
+    pipCtx.textAlign = 'center';
+    pipCtx.fillText('目前沒有進行中的蘑菇', CW / 2, CH / 2);
+    pipCtx.fillText('🍄', CW / 2, CH / 2 + 36);
+    return;
+  }
+
+  const itemH = (CH - 56) / Math.max(sorted.length, 1);
+
+  sorted.forEach((t, i) => {
+    const rem = Math.floor((t.endTime - now) / 1000);
+    const y = 56 + i * itemH;
+    const isWarn = rem >= 0 && rem <= 30;
+    const isDone = rem <= 0;
+
+    // 列背景
+    pipCtx.fillStyle = i % 2 === 0 ? '#16213E' : '#1A2744';
+    pipCtx.fillRect(0, y, CW, itemH);
+
+    // 警示時紅色邊框閃爍
+    if (isWarn && !isDone) {
+      const alpha = 0.4 + 0.6 * Math.abs(Math.sin(now / 400));
+      pipCtx.strokeStyle = `rgba(231,76,60,${alpha})`;
+      pipCtx.lineWidth = 3;
+      pipCtx.strokeRect(1.5, y + 1.5, CW - 3, itemH - 3);
+    }
+
+    // 排名圓點
+    const rankColors = ['#E74C3C', '#E67E22', '#2ECC71'];
+    pipCtx.fillStyle = rankColors[i] || '#2ECC71';
+    pipCtx.beginPath();
+    pipCtx.arc(28, y + itemH / 2, 14, 0, Math.PI * 2);
+    pipCtx.fill();
+    pipCtx.fillStyle = '#FFFFFF';
+    pipCtx.font = 'bold 14px -apple-system, sans-serif';
+    pipCtx.textAlign = 'center';
+    pipCtx.fillText(i + 1, 28, y + itemH / 2 + 5);
+
+    // 地點
+    pipCtx.fillStyle = '#CCCCCC';
+    pipCtx.font = '13px -apple-system, sans-serif';
+    pipCtx.textAlign = 'left';
+    const locText = '📍 ' + (t.location.length > 14 ? t.location.slice(0, 13) + '…' : t.location);
+    pipCtx.fillText(locText, 52, y + itemH / 2 - 8);
+
+    // 倒數時間
+    let timeText, timeColor;
+    if (isDone)        { timeText = '✅ 已重生';              timeColor = '#888888'; }
+    else if (rem <= 10){ timeText = '🚨 ' + formatTime(rem);  timeColor = '#E74C3C'; }
+    else if (rem <= 30){ timeText = '⚠️ ' + formatTime(rem);  timeColor = '#E67E22'; }
+    else               { timeText = '🍄 ' + formatTime(rem);  timeColor = '#2ECC71'; }
+
+    pipCtx.fillStyle = timeColor;
+    pipCtx.font = 'bold 22px Courier New, monospace';
+    pipCtx.textAlign = 'right';
+    pipCtx.fillText(timeText, CW - 16, y + itemH / 2 + 10);
+  });
+
+  // 底部蘑菇數量
+  pipCtx.fillStyle = '#444466';
+  pipCtx.fillRect(0, CH - 22, CW, 22);
+  pipCtx.fillStyle = '#666688';
+  pipCtx.font = '12px -apple-system, sans-serif';
+  pipCtx.textAlign = 'center';
+  pipCtx.fillText(`共 ${timers.length} 個蘑菇`, CW / 2, CH - 6);
+}
+
+function pipLoop() {
+  drawPipFrame();
+  pipRAF = requestAnimationFrame(pipLoop);
+}
+
+async function startPip() {
+  try {
+    // 初始化 Canvas 串流
+    if (!pipVideo.srcObject) {
+      const stream = pipCanvas.captureStream(30);
+      pipVideo.srcObject = stream;
+    }
+    await pipVideo.play();
+
+    // 開始持續繪製
+    if (!pipRAF) pipLoop();
+
+    // 觸發 PiP
+    if (typeof pipVideo.requestPictureInPicture === 'function') {
+      await pipVideo.requestPictureInPicture();
+      pipActive = true;
+      updatePipBtn();
+    } else if (typeof pipVideo.webkitSetPresentationMode === 'function') {
+      // iOS Safari
+      pipVideo.webkitSetPresentationMode('picture-in-picture');
+      pipActive = true;
+      updatePipBtn();
+    } else {
+      showToast('⚠️ 此瀏覽器不支援子母畫面');
+    }
+  } catch(e) {
+    showToast('⚠️ 無法開啟子母畫面：' + (e.message || '請確認已允許畫中畫'));
+    console.error(e);
+  }
+}
+
+async function stopPip() {
+  try {
+    if (document.pictureInPictureElement) {
+      await document.exitPictureInPicture();
+    } else if (pipVideo.webkitPresentationMode === 'picture-in-picture') {
+      pipVideo.webkitSetPresentationMode('inline');
+    }
+  } catch(_) {}
+  pipActive = false;
+  updatePipBtn();
+}
+
+async function togglePip() {
+  if (pipActive) {
+    await stopPip();
+  } else {
+    await startPip();
+  }
+}
+
+function updatePipBtn() {
+  const btn = document.getElementById('pip-btn');
+  if (pipActive) {
+    btn.textContent = '■ 關閉子母畫面';
+    btn.classList.add('active');
+  } else {
+    btn.textContent = '▶ 子母畫面';
+    btn.classList.remove('active');
+  }
+}
+
+// 監聽 PiP 被使用者手動關閉
+pipVideo.addEventListener('leavepictureinpicture', () => {
+  pipActive = false;
+  updatePipBtn();
+});
+
+// ═══════════════════════════════
 // 常用地點
 // ═══════════════════════════════
 let locations = JSON.parse(localStorage.getItem('locations') || '[]');
 function saveLocations() { localStorage.setItem('locations', JSON.stringify(locations)); }
-
 function renderLocations() {
   const el = document.getElementById('location-scroll');
   el.innerHTML = '';
@@ -684,14 +834,12 @@ function renderLocations() {
     el.appendChild(chip);
   });
 }
-
 function addLocation() {
   const input = document.getElementById('new-loc-input');
   const val = input.value.trim();
   if (!val) return;
   if (locations.includes(val)) { showToast('⚠️ 地點已存在'); return; }
-  locations.push(val);
-  saveLocations(); renderLocations();
+  locations.push(val); saveLocations(); renderLocations();
   input.value = '';
   showToast(`✅ 已新增：${val}`);
 }
@@ -722,9 +870,7 @@ function addTimer() {
 
   showToast(`✅ ${loc} 重生倒數 ${formatTime(total + 300)}`);
   document.getElementById('loc-input').value = '';
-  document.getElementById('t-hour').value = '';
-  document.getElementById('t-min').value  = '';
-  document.getElementById('t-sec').value  = '';
+  ['t-hour','t-min','t-sec'].forEach(id => document.getElementById(id).value = '');
   if (currentTab === 1) renderTimerList();
 }
 
@@ -782,10 +928,10 @@ function renderTimerList() {
     const isWarn = rem >= 0 && rem <= 10;
     const isDone = rem <= 0;
     let timeText, timeClass;
-    if (isDone)         { timeText = '✅ 已重生';           timeClass = 'time-gray'; }
-    else if (rem <= 10) { timeText = `🚨 ${formatTime(rem)}`; timeClass = 'time-red'; }
-    else                { timeText = `🍄 ${formatTime(rem)}`; timeClass = 'time-green'; }
-    const rankClass = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : 'rank-3';
+    if (isDone)         { timeText = '✅ 已重生';              timeClass = 'time-gray'; }
+    else if (rem <= 10) { timeText = `🚨 ${formatTime(rem)}`;  timeClass = 'time-red'; }
+    else                { timeText = `🍄 ${formatTime(rem)}`;  timeClass = 'time-green'; }
+    const rankClass = ['rank-1','rank-2','rank-3'][i] || 'rank-3';
     return `
       <div class="timer-item ${isWarn ? 'timer-warning' : ''}">
         <div class="timer-rank ${rankClass}">${i+1}</div>
@@ -810,31 +956,27 @@ function startTick() {
 }
 
 // ═══════════════════════════════
-// Tab 切換
+// Tab
 // ═══════════════════════════════
 function switchTab(i) {
   currentTab = i;
-  ['page0','page1','page2'].forEach((id, idx) => {
-    document.getElementById(id).style.display = idx === i ? 'block' : 'none';
-  });
-  ['tab0','tab1','tab2'].forEach((id, idx) => {
-    document.getElementById(id).className = 'tab-btn' + (idx === i ? ' active' : '');
-  });
+  ['page0','page1','page2'].forEach((id, idx) =>
+    document.getElementById(id).style.display = idx === i ? 'block' : 'none'
+  );
+  ['tab0','tab1','tab2'].forEach((id, idx) =>
+    document.getElementById(id).className = 'tab-btn' + (idx === i ? ' active' : '')
+  );
   if (i === 1) renderTimerList();
 }
 
 // ═══════════════════════════════
-// Modal
+// Modal / Toast
 // ═══════════════════════════════
 function openModal(id)  { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 function closeModalOutside(e, id) {
   if (e.target === document.getElementById(id)) closeModal(id);
 }
-
-// ═══════════════════════════════
-// Toast
-// ═══════════════════════════════
 let toastTimer = null;
 function showToast(msg) {
   const el = document.getElementById('toast');
@@ -851,6 +993,8 @@ applySettings();
 renderLocations();
 checkNotifBanner();
 startTick();
+// PiP Canvas 預先開始繪製（讓 video 有內容）
+pipLoop();
 </script>
 </body>
 </html>
