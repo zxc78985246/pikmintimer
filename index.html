@@ -298,11 +298,16 @@
 <body>
 
 <!-- Canvas + Video（子母畫面用）-->
-<!-- iOS PWA PiP 需要：1) video 在 DOM 中可見（不能 display:none）2) 已 play() 3) 在同步 gesture 內呼叫 -->
-<!-- canvas 離屏，video 縮到 1x1 留在可見範圍內（opacity:0.01 是必要的，display:none 會讓 PiP 失敗） -->
-<canvas id="pip-canvas" width="400" height="300" style="position:fixed;top:-9999px;left:-9999px;width:400px;height:300px;pointer-events:none"></canvas>
-<video id="pip-video" muted playsinline webkit-playsinline autoplay
-  style="position:fixed;bottom:0;right:0;width:1px;height:1px;opacity:0.01;pointer-events:none;z-index:-1">
+<!-- iOS PWA PiP 修復：
+     1. captureStream 在 iOS 不支援 → 改用真實 MP4 loop 作為 video 來源
+     2. Canvas 繪製的畫面透過 canvas.toBlob() 無法注入 video，故 video 顯示靜音背景
+     3. PiP 視窗的「畫中畫」內容由 iOS 顯示 video 來源；計時資訊仍在主畫面顯示
+     4. video 必須在 DOM 可見範圍（不能 display:none）且 paused=false 才能觸發 PiP
+-->
+<canvas id="pip-canvas" width="400" height="300" style="position:fixed;top:-9999px;left:-9999px;pointer-events:none;width:1px;height:1px;opacity:0"></canvas>
+<video id="pip-video" muted playsinline webkit-playsinline loop
+  style="position:fixed;bottom:0;right:0;width:1px;height:1px;opacity:0.01;pointer-events:none;z-index:-1"
+  src="data:video/mp4;base64,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AAQAAAAgc3RjbwAAAAAAAAAEAAAH0gAACm0AAAsnAAAL3QAAABpzZ3BkAQAAAHJvbGwAAAACAAAAAf//AAAAHHNiZ3AAAAAAcm9sbAAAAAEAAACDAAAAAQAAAGJ1ZHRhAAAAWm1ldGEAAAAAAAAAIWhkbHIAAAAAAAAAAG1kaXJhcHBsAAAAAAAAAAAAAAAALWlsc3QAAAAlqXRvbwAAAB1kYXRhAAAAAQAAAABMYXZmNjAuMTYuMTAwAAAACGZyZWUAAAS/bWRhdN4CAExhdmM2MC4zMS4xMDIAAjBADgAAAnAGBf//bNxF6b3m2Ui3lizYINkj7u94MjY0IC0gY29yZSAxNjQgcjMxMDggMzFlMTlmOSAtIEguMjY0L01QRUctNCBBVkMgY29kZWMgLSBDb3B5bGVmdCAyMDAzLTIwMjMgLSBodHRwOi8vd3d3LnZpZGVvbGFuLm9yZy94MjY0Lmh0bWwgLSBvcHRpb25zOiBjYWJhYz0wIHJlZj0zIGRlYmxvY2s9MTowOjAgYW5hbHlzZT0weDE6MHgxMTEgbWU9aGV4IHN1Ym1lPTcgcHN5PTEgcHN5X3JkPTEuMDA6MC4wMCBtaXhlZF9yZWY9MSBtZV9yYW5nZT0xNiBjaHJvbWFfbWU9MSB0cmVsbGlzPTEgOHg4ZGN0PTAgY3FtPTAgZGVhZHpvbmU9MjEsMTEgZmFzdF9wc2tpcD0xIGNocm9tYV9xcF9vZmZzZXQ9LTIgdGhyZWFkcz0xIGxvb2thaGVhZF90aHJlYWRzPTEgc2xpY2VkX3RocmVhZHM9MCBucj0wIGRlY2ltYXRlPTEgaW50ZXJsYWNlZD0wIGJsdXJheV9jb21wYXQ9MCBjb25zdHJhaW5lZF9pbnRyYT0wIGJmcmFtZXM9MCB3ZWlnaHRwPTAga2V5aW50PTI1MCBrZXlpbnRfbWluPTEgc2NlbmVjdXQ9NDAgaW50cmFfcmVmcmVzaD0wIHJjX2xvb2thaGVhZD00MCByYz1jcmYgbWJ0cmVlPTEgY3JmPTIzLjAgcWNvbXA9MC42MCBxcG1pbj0wIHFwbWF4PTY5IHFwc3RlcD00IGlwX3JhdGlvPTEuNDAgYXE9MToxLjAwAIAAAAAOZYiEBf///w9FAAFXn4ABGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwAAAAZBmjgLeoABGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHAAAABkGaVAK+oAEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwEYIAc=">
 </video>
 
 <!-- Header -->
@@ -636,18 +641,13 @@ function testNotification() {
 
 // ═══════════════════════════════
 // 子母畫面（Canvas → Video Stream → PiP）
-// iOS PWA 相容版本 v2
-// 關鍵修復：
-//   1. captureStream() 在 iOS 不支援 → 改用 MediaStream + canvas.captureStream 偵測
-//   2. await play() 打破 user gesture 同步鏈 → 頁面載入時就 play()，按鈕時同步呼叫 PiP
-//   3. video 必須在可見 DOM 中（不能 display:none / off-screen）
+// iOS PWA 相容版本
 // ═══════════════════════════════
 const pipCanvas = document.getElementById('pip-canvas');
 const pipVideo  = document.getElementById('pip-video');
 const pipCtx    = pipCanvas.getContext('2d');
 let pipActive   = false;
 let pipDrawInterval = null;
-let pipVideoReady = false;
 
 // Canvas 尺寸 4:3，兩個蘑菇用
 const CW = 400, CH = 300;
@@ -774,89 +774,74 @@ function stopPipDraw() {
   if (pipDrawInterval) { clearInterval(pipDrawInterval); pipDrawInterval = null; }
 }
 
-// ── 預先初始化 video srcObject（頁面載入時執行）──
-// iOS PWA 必須在 page load 時就建立 stream 並呼叫 play()
-// 按鈕觸發時只能同步呼叫 webkitSetPresentationMode，不能有任何 await
-function initPipStream() {
+// ═══════════════════════════════
+// iOS PWA PiP 修復版
+// 問題：
+//   1. captureStream() 在 iOS 不支援 → video.srcObject 無法用 canvas stream
+//   2. async/await play() 打破 user gesture 同步鏈 → "not triggered by user activation"
+//   3. video 放在螢幕外 (-9999px) 可能被 iOS 視為不可見
+// 解法：
+//   1. video src 改用內嵌 base64 MP4（真實來源，iOS 可正常播放）
+//   2. 頁面載入時立刻嘗試 play()；若失敗，第一次 touch 時再試
+//   3. 按鈕觸發時：video 已在播放 → 同步呼叫 webkitSetPresentationMode（無 await）
+//   4. PiP 視窗會顯示靜音黑色背景；計時資訊繼續在主畫面更新
+// ═══════════════════════════════
+let pipVideoReady = false;
+
+function initPipVideo() {
   if (pipVideoReady) return;
-  try {
-    // captureStream 在 iOS Safari / iOS PWA 不支援，要先偵測
-    if (typeof pipCanvas.captureStream === 'function') {
-      const stream = pipCanvas.captureStream(4);
-      pipVideo.srcObject = stream;
-      // play() 在 page load 時呼叫（非 user gesture 限制環境下 muted video 可以自動播放）
-      pipVideo.play().then(() => {
-        pipVideoReady = true;
-        console.log('PiP video ready (captureStream)');
-      }).catch(e => {
-        console.warn('video play failed:', e);
-        // 失敗時改用 user gesture 策略
-      });
-    } else {
-      console.warn('captureStream 不支援（iOS Safari），改用 user-gesture play 策略');
-    }
-  } catch(e) {
-    console.warn('initPipStream error', e);
-  }
+  // video src 已在 HTML 設定（base64 MP4），直接嘗試 play
+  pipVideo.play().then(() => {
+    pipVideoReady = true;
+    console.log('PiP video ready');
+  }).catch(err => {
+    // muted video 在 iOS PWA 通常可以自動播放，若失敗等待 user gesture
+    console.warn('video autoplay blocked, will retry on gesture:', err.message);
+  });
 }
 
-// ── iOS PWA 專用：在第一次 user gesture 時 play video ──
-// （因為 iOS 限制 muted autoplay 在某些情況下仍需 gesture）
-function ensureVideoPlayedOnGesture() {
-  if (pipVideoReady) return Promise.resolve();
-  // 嘗試設定 srcObject（如果 captureStream 之前失敗了）
-  try {
-    if (!pipVideo.srcObject && typeof pipCanvas.captureStream === 'function') {
-      pipVideo.srcObject = pipCanvas.captureStream(4);
-    }
-  } catch(e) {}
+// 在第一次 user gesture 時確保 video 已播放
+function ensureVideoPlaying() {
+  if (pipVideoReady && !pipVideo.paused) return Promise.resolve();
   return pipVideo.play().then(() => {
     pipVideoReady = true;
   });
 }
 
-// ── 觸發 PiP（iOS PWA 相容版）──
-// 策略：
-//   先嘗試同步呼叫（video 已 play）→ 成功
-//   若 video 未 play，先 play() 再用 setTimeout(0) 同步觸發 PiP
-//   iOS PWA 中 setTimeout 0 仍算在 gesture 內（測試有效）
+// ── 觸發 PiP（同步版，iOS PWA 相容）──
+function doPipRequest() {
+  // iOS Safari / iOS PWA 優先使用 webkit API（同步，不破壞 gesture chain）
+  if (typeof pipVideo.webkitSetPresentationMode === 'function') {
+    pipVideo.webkitSetPresentationMode('picture-in-picture');
+    pipActive = true;
+    updatePipBtn();
+    return;
+  }
+  // 非 iOS（Chrome/Firefox）使用標準 API（允許 Promise）
+  if (typeof pipVideo.requestPictureInPicture === 'function') {
+    pipVideo.requestPictureInPicture().then(() => {
+      pipActive = true;
+      updatePipBtn();
+    }).catch(e => {
+      showToast('⚠️ 無法開啟子母畫面：' + (e.message || e));
+      stopPipDraw();
+    });
+    return;
+  }
+  showToast('⚠️ 此環境不支援子母畫面');
+  stopPipDraw();
+}
+
 function startPip() {
   startPipDraw();
 
-  const doPip = () => {
-    // iOS Safari / iOS PWA 優先使用 webkit API
-    if (typeof pipVideo.webkitSetPresentationMode === 'function') {
-      try {
-        pipVideo.webkitSetPresentationMode('picture-in-picture');
-        pipActive = true;
-        updatePipBtn();
-        return;
-      } catch(e) {
-        console.warn('webkitSetPresentationMode failed:', e);
-      }
-    }
-    // 標準 API（Chrome / Firefox）
-    if (typeof pipVideo.requestPictureInPicture === 'function') {
-      pipVideo.requestPictureInPicture().then(() => {
-        pipActive = true;
-        updatePipBtn();
-      }).catch(e => {
-        showToast('⚠️ 無法開啟子母畫面：' + (e.message || e));
-        stopPipDraw();
-      });
-      return;
-    }
-    showToast('⚠️ 此環境不支援子母畫面');
-    stopPipDraw();
-  };
-
   if (pipVideoReady && !pipVideo.paused) {
-    // video 已在播放 → 直接同步觸發
-    doPip();
+    // video 已在播放 → 直接同步觸發（iOS PWA 的理想路徑）
+    doPipRequest();
   } else {
-    // video 尚未播放 → 在 gesture context 內 play 後立刻觸發
-    ensureVideoPlayedOnGesture().then(() => {
-      doPip();
+    // video 尚未播放 → 在當前 gesture context 中 play 後立刻觸發
+    ensureVideoPlaying().then(() => {
+      doPipRequest();
     }).catch(e => {
       showToast('⚠️ 無法啟動影像：' + (e.message || e));
       stopPipDraw();
@@ -1090,23 +1075,18 @@ applySettings();
 renderLocations();
 checkNotifBanner();
 startTick();
-
-// 預先初始化 PiP stream（頁面載入時建立 captureStream 並嘗試 play）
-initPipStream();
-// 先畫一次，讓 canvas 有初始內容
+// 頁面載入時立刻嘗試播放 video（muted video 在 iOS PWA 通常允許自動播放）
+initPipVideo();
+// 先畫一次 canvas
 drawPipFrame();
 
-// iOS PWA 備用策略：監聽第一次 touchstart，在 user gesture 中確保 video play
-// 這樣之後按 PiP 按鈕時 video 已經 ready，可以同步觸發 PiP
-(function setupFirstTouchPlay() {
-  const handler = () => {
-    if (!pipVideoReady) {
-      ensureVideoPlayedOnGesture().catch(() => {});
-    }
-    document.removeEventListener('touchstart', handler, true);
-  };
-  document.addEventListener('touchstart', handler, { once: true, capture: true, passive: true });
-})();
+// 備援：第一次 touchstart 時再試一次（處理 autoplay 被封鎖的情況）
+document.addEventListener('touchstart', function pipVideoInit() {
+  if (!pipVideoReady || pipVideo.paused) {
+    pipVideo.play().then(() => { pipVideoReady = true; }).catch(() => {});
+  }
+  document.removeEventListener('touchstart', pipVideoInit, true);
+}, { once: true, capture: true, passive: true });
 </script>
 </body>
 </html>
